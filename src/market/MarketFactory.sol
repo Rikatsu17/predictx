@@ -1,34 +1,74 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 import "./PredictionMarket.sol";
 import "../token/PredictAIOutcomeShares.sol";
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-
 contract MarketFactory is Ownable {
+    address public immutable settlementToken;
     address public immutable outcomeShares;
+    address public feeVault;
+    address public defaultOracle;
+    uint256 public defaultDisputeWindow;
 
     address[] public markets;
-    address public oracle;
 
-    event MarketCreated(address indexed market, string question, uint256 endTime);
+    event MarketCreated(
+        address indexed creator,
+        address indexed market,
+        string question,
+        uint256 endTime,
+        address oracle,
+        bool deterministic
+    );
+    event DefaultOracleUpdated(address indexed oracle);
+    event FeeVaultUpdated(address indexed feeVault);
+    event DisputeWindowUpdated(uint256 disputeWindow);
 
-    constructor(address _outcomeShares, address _oracle) Ownable(msg.sender) {
+    constructor(
+        address _settlementToken,
+        address _outcomeShares,
+        address _defaultOracle,
+        address _feeVault,
+        uint256 _defaultDisputeWindow
+    ) Ownable(msg.sender) {
+        settlementToken = _settlementToken;
         outcomeShares = _outcomeShares;
-
-        oracle = _oracle;
+        defaultOracle = _defaultOracle;
+        feeVault = _feeVault;
+        defaultDisputeWindow = _defaultDisputeWindow;
     }
 
     function createMarket(string memory question, uint256 endTime, bytes32 salt) external returns (address) {
-        PredictionMarket market = new PredictionMarket{salt: salt}(outcomeShares, oracle, question, endTime);
-        PredictAIOutcomeShares(outcomeShares).grantMarketRole(address(market));
+        return _createMarketDeterministic(question, endTime, salt, defaultOracle);
+    }
 
-        markets.push(address(market));
+    function createMarketWithCreate(string memory question, uint256 endTime) external returns (address market) {
+        market = address(
+            new PredictionMarket(
+                settlementToken,
+                outcomeShares,
+                defaultOracle,
+                feeVault,
+                question,
+                endTime,
+                defaultDisputeWindow,
+                owner()
+            )
+        );
 
-        emit MarketCreated(address(market), question, endTime);
+        _registerMarket(msg.sender, market, question, endTime, defaultOracle, false);
+    }
 
-        return address(market);
+    function createMarketWithOracle(
+        string memory question,
+        uint256 endTime,
+        bytes32 salt,
+        address oracle
+    ) external returns (address) {
+        return _createMarketDeterministic(question, endTime, salt, oracle);
     }
 
     function getMarkets() external view returns (address[] memory) {
@@ -36,6 +76,54 @@ contract MarketFactory is Ownable {
     }
 
     function updateOracle(address newOracle) external onlyOwner {
-        oracle = newOracle;
+        defaultOracle = newOracle;
+        emit DefaultOracleUpdated(newOracle);
+    }
+
+    function updateFeeVault(address newFeeVault) external onlyOwner {
+        feeVault = newFeeVault;
+        emit FeeVaultUpdated(newFeeVault);
+    }
+
+    function updateDisputeWindow(uint256 newDisputeWindow) external onlyOwner {
+        require(newDisputeWindow > 0, "invalid dispute window");
+        defaultDisputeWindow = newDisputeWindow;
+        emit DisputeWindowUpdated(newDisputeWindow);
+    }
+
+    function _createMarketDeterministic(
+        string memory question,
+        uint256 endTime,
+        bytes32 salt,
+        address oracle
+    ) internal returns (address market) {
+        market = address(
+            new PredictionMarket{salt: salt}(
+                settlementToken,
+                outcomeShares,
+                oracle,
+                feeVault,
+                question,
+                endTime,
+                defaultDisputeWindow,
+                owner()
+            )
+        );
+
+        _registerMarket(msg.sender, market, question, endTime, oracle, true);
+    }
+
+    function _registerMarket(
+        address creator,
+        address market,
+        string memory question,
+        uint256 endTime,
+        address oracle,
+        bool deterministic
+    ) internal {
+        PredictAIOutcomeShares(outcomeShares).grantMarketRole(market);
+        markets.push(market);
+
+        emit MarketCreated(creator, market, question, endTime, oracle, deterministic);
     }
 }
