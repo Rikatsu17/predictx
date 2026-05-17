@@ -13,6 +13,7 @@ contract InvariantTest is StdInvariant, Test {
     PredictionMarket market;
     PredictAIToken token;
     PredictAIOutcomeShares shares;
+    address liquidityProvider = address(11);
 
     function setUp() public {
         token = new PredictAIToken();
@@ -31,11 +32,17 @@ contract InvariantTest is StdInvariant, Test {
         );
 
         shares.grantMarketRole(address(market));
+        token.transfer(liquidityProvider, 5_000 ether);
+        vm.startPrank(liquidityProvider);
         token.approve(address(market), type(uint256).max);
         market.buyYesShares(1_000 ether);
         market.buyNoShares(1_000 ether);
         shares.setApprovalForAll(address(market), true);
-        market.provideLiquidity(shares.balanceOf(address(this), market.yesTokenId()), shares.balanceOf(address(this), market.noTokenId()));
+        market.provideLiquidity(
+            shares.balanceOf(liquidityProvider, market.yesTokenId()),
+            shares.balanceOf(liquidityProvider, market.noTokenId())
+        );
+        vm.stopPrank();
 
         targetContract(address(market));
     }
