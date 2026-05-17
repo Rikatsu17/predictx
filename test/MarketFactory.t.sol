@@ -8,18 +8,23 @@ import {PredictAIOutcomeShares} from "src/token/PredictAIOutcomeShares.sol";
 import {MarketFactory} from "src/market/MarketFactory.sol";
 
 import {PredictionMarket} from "src/market/PredictionMarket.sol";
+import {OracleAdapter} from "src/oracle/OracleAdapter.sol";
 
 contract MarketFactoryTest is Test {
     PredictAIOutcomeShares shares;
 
     MarketFactory factory;
+    OracleAdapter oracle;
 
     address alice = address(1);
 
     function setUp() public {
         shares = new PredictAIOutcomeShares();
 
-        factory = new MarketFactory(address(shares));
+        oracle = new OracleAdapter(true);
+
+        factory = new MarketFactory(address(shares), address(oracle));
+
         shares.grantRole(shares.DEFAULT_ADMIN_ROLE(), address(factory));
     }
 

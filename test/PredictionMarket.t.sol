@@ -7,17 +7,23 @@ import {PredictAIOutcomeShares} from "src/token/PredictAIOutcomeShares.sol";
 
 import {PredictionMarket} from "src/market/PredictionMarket.sol";
 
+import {OracleAdapter} from "src/oracle/OracleAdapter.sol";
+
 contract PredictionMarketTest is Test {
     PredictAIOutcomeShares shares;
 
     PredictionMarket market;
+    OracleAdapter oracle;
 
     address alice = address(1);
 
     function setUp() public {
+        oracle = new OracleAdapter(true);
         shares = new PredictAIOutcomeShares();
 
-        market = new PredictionMarket(address(shares), "Will GPT-6 release before 2027?", block.timestamp + 1 days);
+        market = new PredictionMarket(
+            address(shares), address(oracle), "Will GPT-6 release before 2027?", block.timestamp + 1 days
+        );
 
         shares.grantRole(shares.MARKET_ROLE(), address(market));
     }
@@ -41,7 +47,9 @@ contract PredictionMarketTest is Test {
     function testResolveMarket() public {
         vm.warp(block.timestamp + 2 days);
 
-        market.resolveMarket(true);
+        oracle.updateOutcome(true);
+
+        market.resolveMarket();
 
         assertEq(market.resolved(), true);
 

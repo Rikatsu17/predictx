@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import "../token/PredictAIOutcomeShares.sol";
 
+import "../interfaces/IOracleAdapter.sol";
+
 contract PredictionMarket {
     PredictAIOutcomeShares public immutable outcomeShares;
 
@@ -14,6 +16,7 @@ contract PredictionMarket {
 
     bool public outcome;
 
+    IOracleAdapter public oracle;
     uint256 public totalYesShares;
     uint256 public yesReserve;
 
@@ -29,8 +32,10 @@ contract PredictionMarket {
 
     uint256 public constant NO = 2;
 
-    constructor(address _outcomeShares, string memory _question, uint256 _endTime) {
+    constructor(address _outcomeShares, address _oracle, string memory _question, uint256 _endTime) {
         outcomeShares = PredictAIOutcomeShares(_outcomeShares);
+
+        oracle = IOracleAdapter(_oracle);
 
         question = _question;
 
@@ -53,14 +58,16 @@ contract PredictionMarket {
         outcomeShares.mint(msg.sender, NO, amount);
     }
 
-    function resolveMarket(bool _outcome) external {
+    function resolveMarket() external {
         require(block.timestamp >= endTime, "Market active");
 
         require(!resolved, "Already resolved");
 
+        require(!oracle.isStale(), "Oracle stale");
+
         resolved = true;
 
-        outcome = _outcome;
+        outcome = oracle.getOutcome();
     }
 
     function provideLiquidity(uint256 yesAmount, uint256 noAmount) external {
