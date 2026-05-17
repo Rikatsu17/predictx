@@ -19,5 +19,9 @@ contract PredictAITreasuryVault is Initializable, ERC4626Upgradeable, ERC20Permi
         return 1;
     }
 
+    function decimals() public view override(ERC20Upgradeable, ERC4626Upgradeable) returns (uint8) {
+        return super.decimals();
+    }
+
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

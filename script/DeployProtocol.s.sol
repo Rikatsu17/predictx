@@ -35,7 +35,7 @@ contract DeployProtocolScript is Script {
         string memory initialQuestion =
             vm.envOr("INITIAL_MARKET_QUESTION", string("Will GPT-6 release before 2027?"));
         uint256 initialEndTime = vm.envOr("INITIAL_MARKET_END_TIME", block.timestamp + 30 days);
-        uint256 defaultDisputeWindow = vm.envOr("DEFAULT_DISPUTE_WINDOW", 2 days);
+        uint256 defaultDisputeWindow = vm.envOr("DEFAULT_DISPUTE_WINDOW", uint256(2 days));
         bool createInitialMarket = vm.envOr("CREATE_INITIAL_MARKET", true);
         bool initialOracleOutcome = vm.envOr("INITIAL_ORACLE_OUTCOME", true);
         bool useChainlinkOracle = vm.envOr("USE_CHAINLINK_ORACLE", false);
@@ -65,7 +65,7 @@ contract DeployProtocolScript is Script {
             address feed = vm.envAddress("CHAINLINK_FEED");
             int256 threshold = vm.envInt("CHAINLINK_THRESHOLD");
             bool resolveAbove = vm.envOr("CHAINLINK_RESOLVE_ABOVE", true);
-            uint256 staleWindow = vm.envOr("CHAINLINK_STALE_WINDOW", 1 days);
+            uint256 staleWindow = vm.envOr("CHAINLINK_STALE_WINDOW", uint256(1 days));
             oracleAddress = address(new ChainlinkOracleAdapter(feed, threshold, resolveAbove, staleWindow));
         } else {
             oracleAddress = address(new OracleAdapter(initialOracleOutcome));
