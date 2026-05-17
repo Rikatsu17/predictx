@@ -4,7 +4,9 @@ pragma solidity ^0.8.24;
 import "./PredictionMarket.sol";
 import "../token/PredictAIOutcomeShares.sol";
 
-contract MarketFactory {
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MarketFactory is Ownable {
     address public immutable outcomeShares;
 
     address[] public markets;
@@ -12,7 +14,7 @@ contract MarketFactory {
 
     event MarketCreated(address indexed market, string question, uint256 endTime);
 
-    constructor(address _outcomeShares, address _oracle) {
+    constructor(address _outcomeShares, address _oracle) Ownable(msg.sender) {
         outcomeShares = _outcomeShares;
 
         oracle = _oracle;
@@ -31,5 +33,9 @@ contract MarketFactory {
 
     function getMarkets() external view returns (address[] memory) {
         return markets;
+    }
+
+    function updateOracle(address newOracle) external onlyOwner {
+        oracle = newOracle;
     }
 }
