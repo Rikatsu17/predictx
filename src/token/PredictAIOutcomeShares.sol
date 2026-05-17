@@ -61,4 +61,15 @@ contract PredictAIOutcomeShares is
 {
     return super.supportsInterface(interfaceId);
 }
+function grantMarketRole(
+    address market
+)
+    external
+    onlyRole(DEFAULT_ADMIN_ROLE)
+{
+    grantRole(
+        MARKET_ROLE,
+        market
+    );
+}
 }
