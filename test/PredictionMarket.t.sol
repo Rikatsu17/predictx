@@ -81,4 +81,31 @@ contract PredictionMarketTest is Test {
 
         assertEq(probability, 90);
     }
+
+    function testFuzzGetAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) public {
+        vm.assume(amountIn > 0);
+        reserveIn = bound(reserveIn, 100, 1e24);
+
+        reserveOut = bound(reserveOut, 100, 1e24);
+
+        amountIn = bound(amountIn, 1, 1e24);
+
+        uint256 output = market.getAmountOut(amountIn, reserveIn, reserveOut);
+
+        assertGt(output, 0);
+    }
+
+    function testFuzzSwapYesForNo(uint256 liquidity, uint256 swapAmount) public {
+        liquidity = bound(liquidity, 1000, 1_000_000);
+
+        swapAmount = bound(swapAmount, 1, liquidity / 2);
+
+        market.provideLiquidity(liquidity, liquidity);
+
+        uint256 noOut = market.swapYesForNo(swapAmount, 1);
+
+        assertGt(noOut, 0);
+
+        assertGt(market.yesReserve(), liquidity);
+    }
 }
