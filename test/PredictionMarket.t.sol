@@ -47,4 +47,30 @@ contract PredictionMarketTest is Test {
 
         assertEq(market.outcome(), true);
     }
+
+    function testProvideLiquidity() public {
+        market.provideLiquidity(1000, 1000);
+
+        assertEq(market.yesReserve(), 1000);
+
+        assertEq(market.noReserve(), 1000);
+    }
+
+    function testSwapYesForNo() public {
+        market.provideLiquidity(1000, 1000);
+
+        uint256 noOut = market.swapYesForNo(100, 1);
+
+        assertGt(noOut, 0);
+
+        assertEq(market.yesReserve(), 1100);
+    }
+
+    function testProbability() public {
+        market.provideLiquidity(900, 100);
+
+        uint256 probability = market.getYesProbability();
+
+        assertEq(probability, 90);
+    }
 }
