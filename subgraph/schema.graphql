@@ -1,0 +1,52 @@
+type Market @entity {
+  id: ID!
+  creator: Bytes!
+  question: String!
+  oracle: Bytes!
+  endTime: BigInt!
+  deterministic: Boolean!
+  createdAtBlock: BigInt!
+  createdAtTimestamp: BigInt!
+  totalVolume: BigInt!
+  yesVolume: BigInt!
+  noVolume: BigInt!
+  liquidityAdded: BigInt!
+  liquidityRemoved: BigInt!
+  resolved: Boolean!
+  finalized: Boolean!
+  outcome: Boolean
+  trades: [Trade!]! @derivedFrom(field: "market")
+  resolutions: [Resolution!]! @derivedFrom(field: "market")
+}
+
+type Trade @entity {
+  id: ID!
+  market: Market!
+  trader: Bytes!
+  kind: String!
+  tokenIn: BigInt
+  tokenOut: BigInt
+  amountIn: BigInt!
+  amountOut: BigInt!
+  txHash: Bytes!
+  timestamp: BigInt!
+}
+
+type LiquidityPosition @entity {
+  id: ID!
+  market: Market!
+  provider: Bytes!
+  totalYesDeposited: BigInt!
+  totalNoDeposited: BigInt!
+  totalLpMinted: BigInt!
+  totalLpBurned: BigInt!
+}
+
+type Resolution @entity {
+  id: ID!
+  market: Market!
+  resolvedAt: BigInt!
+  finalizedAt: BigInt
+  outcome: Boolean!
+  finalized: Boolean!
+}

@@ -118,6 +118,7 @@ contract PredictionMarketTest is Test {
         market.buyYesShares(100 ether);
 
         vm.warp(block.timestamp + 2 days);
+        oracle.updateStaleThreshold(3 days);
         market.resolveMarket();
         vm.warp(block.timestamp + 1 days + 1);
         market.finalizeMarket();
@@ -133,6 +134,7 @@ contract PredictionMarketTest is Test {
 
     function testDisputeBlocksFinalize() public {
         vm.warp(block.timestamp + 2 days);
+        oracle.updateStaleThreshold(3 days);
         market.resolveMarket();
         market.disputeMarket("oracle mismatch");
         vm.warp(block.timestamp + 1 days + 1);

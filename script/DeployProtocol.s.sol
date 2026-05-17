@@ -4,18 +4,29 @@ pragma solidity ^0.8.24;
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+
 import {PredictAIToken} from "src/token/PredictAIToken.sol";
 import {PredictAIOutcomeShares} from "src/token/PredictAIOutcomeShares.sol";
-import {ChainlinkOracleAdapter} from "src/oracle/ChainlinkOracleAdapter.sol";
 import {OracleAdapter} from "src/oracle/OracleAdapter.sol";
+import {ChainlinkOracleAdapter} from "src/oracle/ChainlinkOracleAdapter.sol";
 import {MarketFactory} from "src/market/MarketFactory.sol";
 import {PredictAITimelock} from "src/governance/Timelock.sol";
 import {PredictAIGovernor} from "src/governance/PredictAIGovernor.sol";
-import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {PredictAITreasuryVault} from "src/vault/PredictAITreasuryVault.sol";
 
 contract DeployProtocolScript is Script {
+    struct Config {
+        string initialQuestion;
+        uint256 initialEndTime;
+        uint256 defaultDisputeWindow;
+        bool createInitialMarket;
+        bool initialOracleOutcome;
+        bool useChainlinkOracle;
+        bytes32 initialSalt;
+    }
+
     struct Deployment {
         address token;
         address shares;
@@ -28,27 +39,34 @@ contract DeployProtocolScript is Script {
         address initialMarket;
     }
 
-    function run() external returns (Deployment memory deployed) {
+    function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
-
-        string memory initialQuestion =
-            vm.envOr("INITIAL_MARKET_QUESTION", string("Will GPT-6 release before 2027?"));
-        uint256 initialEndTime = vm.envOr("INITIAL_MARKET_END_TIME", block.timestamp + 30 days);
-        uint256 defaultDisputeWindow = vm.envOr("DEFAULT_DISPUTE_WINDOW", uint256(2 days));
-        bool createInitialMarket = vm.envOr("CREATE_INITIAL_MARKET", true);
-        bool initialOracleOutcome = vm.envOr("INITIAL_ORACLE_OUTCOME", true);
-        bool useChainlinkOracle = vm.envOr("USE_CHAINLINK_ORACLE", false);
-        bytes32 initialSalt = keccak256(bytes(vm.envOr("INITIAL_MARKET_SALT", string("PREDICTX_INITIAL_MARKET"))));
+        Config memory config = _loadConfig();
 
         vm.startBroadcast(deployerPrivateKey);
+        Deployment memory deployed = _deploy(config, deployer);
+        vm.stopBroadcast();
 
+        _logDeployment(deployer, deployed);
+    }
+
+    function _loadConfig() internal view returns (Config memory config) {
+        config.initialQuestion = vm.envOr("INITIAL_MARKET_QUESTION", string("Will GPT-6 release before 2027?"));
+        config.initialEndTime = vm.envOr("INITIAL_MARKET_END_TIME", block.timestamp + 30 days);
+        config.defaultDisputeWindow = vm.envOr("DEFAULT_DISPUTE_WINDOW", uint256(2 days));
+        config.createInitialMarket = vm.envOr("CREATE_INITIAL_MARKET", true);
+        config.initialOracleOutcome = vm.envOr("INITIAL_ORACLE_OUTCOME", true);
+        config.useChainlinkOracle = vm.envOr("USE_CHAINLINK_ORACLE", false);
+        config.initialSalt = keccak256(bytes(vm.envOr("INITIAL_MARKET_SALT", string("PREDICTX_INITIAL_MARKET"))));
+    }
+
+    function _deploy(Config memory config, address deployer) internal returns (Deployment memory deployed) {
         PredictAIToken token = new PredictAIToken();
         PredictAIOutcomeShares shares = new PredictAIOutcomeShares();
 
         address[] memory proposers = new address[](1);
         proposers[0] = address(0);
-
         address[] memory executors = new address[](1);
         executors[0] = address(0);
 
@@ -59,24 +77,14 @@ contract DeployProtocolScript is Script {
             address(vaultImplementation),
             abi.encodeCall(PredictAITreasuryVault.initialize, (address(token), address(timelock)))
         );
-
-        address oracleAddress;
-        if (useChainlinkOracle) {
-            address feed = vm.envAddress("CHAINLINK_FEED");
-            int256 threshold = vm.envInt("CHAINLINK_THRESHOLD");
-            bool resolveAbove = vm.envOr("CHAINLINK_RESOLVE_ABOVE", true);
-            uint256 staleWindow = vm.envOr("CHAINLINK_STALE_WINDOW", uint256(1 days));
-            oracleAddress = address(new ChainlinkOracleAdapter(feed, threshold, resolveAbove, staleWindow));
-        } else {
-            oracleAddress = address(new OracleAdapter(initialOracleOutcome));
-        }
+        address oracleAddress = _deployOracle(config);
 
         MarketFactory marketFactory = new MarketFactory(
             address(token),
             address(shares),
             oracleAddress,
             address(vaultProxy),
-            defaultDisputeWindow
+            config.defaultDisputeWindow
         );
 
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
@@ -90,11 +98,9 @@ contract DeployProtocolScript is Script {
         shares.renounceRole(shares.DEFAULT_ADMIN_ROLE(), deployer);
 
         address initialMarket = address(0);
-        if (createInitialMarket) {
-            initialMarket = marketFactory.createMarket(initialQuestion, initialEndTime, initialSalt);
+        if (config.createInitialMarket) {
+          initialMarket = marketFactory.createMarket(config.initialQuestion, config.initialEndTime, config.initialSalt);
         }
-
-        vm.stopBroadcast();
 
         deployed = Deployment({
             token: address(token),
@@ -107,7 +113,21 @@ contract DeployProtocolScript is Script {
             governor: address(governor),
             initialMarket: initialMarket
         });
+    }
 
+    function _deployOracle(Config memory config) internal returns (address oracleAddress) {
+        if (config.useChainlinkOracle) {
+            address feed = vm.envAddress("CHAINLINK_FEED");
+            int256 threshold = vm.envInt("CHAINLINK_THRESHOLD");
+            bool resolveAbove = vm.envOr("CHAINLINK_RESOLVE_ABOVE", true);
+            uint256 staleWindow = vm.envOr("CHAINLINK_STALE_WINDOW", uint256(1 days));
+            return address(new ChainlinkOracleAdapter(feed, threshold, resolveAbove, staleWindow));
+        }
+
+        return address(new OracleAdapter(config.initialOracleOutcome));
+    }
+
+    function _logDeployment(address deployer, Deployment memory deployed) internal view {
         console2.log("Deployment complete for deployer:", deployer);
         console2.log("PredictAIToken:", deployed.token);
         console2.log("PredictAIOutcomeShares:", deployed.shares);
