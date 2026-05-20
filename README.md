@@ -1,66 +1,198 @@
-## Foundry
+# PredictX — AI & Tech Prediction Market
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+PredictX is a decentralized on-chain prediction market protocol focused on AI and technology-related events.
 
-Foundry consists of:
+Users can trade YES/NO outcome shares for real-world predictions such as:
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- Will GPT-6 release before 2027?
+- Will NVIDIA stock exceed $300?
+- Will AGI arrive before 2030?
+- Will Apple release AR glasses?
 
-## Documentation
+The protocol is fully decentralized and governed by a DAO using OpenZeppelin Governor + Timelock architecture.
 
-https://book.getfoundry.sh/
+---
 
-## Usage
+# Features
 
-### Build
+## Core Protocol
 
-```shell
-$ forge build
-```
+- Binary prediction markets
+- Constant-product AMM (x * y = k)
+- ERC1155 outcome shares
+- ERC20 governance token
+- ERC20Votes governance system
+- DAO-controlled protocol parameters
+- Liquidity pools with LP tokens
+- Chainlink oracle integration
+- ERC4626 treasury vault
+- Upgradeable UUPS treasury contract
+- CREATE2 deterministic deployment support
 
-### Test
+---
 
-```shell
-$ forge test
-```
+# Tech Stack
 
-### Format
+## Smart Contracts
 
-```shell
-$ forge fmt
-```
+- Solidity
+- Foundry
+- OpenZeppelin Contracts
+- OpenZeppelin Upgradeable Contracts
 
-### Gas Snapshots
+## Frontend
 
-```shell
-$ forge snapshot
-```
+- Next.js
+- TypeScript
+- Wagmi
+- Viem
+- RainbowKit
+- TailwindCSS
 
-### Anvil
+## Infrastructure
 
-```shell
-$ anvil
-```
+- Arbitrum Sepolia
+- The Graph
+- GitHub Actions CI/CD
+- Slither
 
-### Deploy
+---
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+# Architecture
 
-### Cast
+The protocol consists of several modules:
 
-```shell
-$ cast <subcommand>
-```
+## Governance
 
-### Help
+- PredictAIToken (ERC20Votes)
+- PredictAIGovernor
+- TimelockController
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+## Market System
+
+- PredictionMarket
+- MarketFactory
+- PredictionMarketLPToken
+
+## Tokenization
+
+- PredictAIOutcomeShares (ERC1155)
+
+## Treasury
+
+- PredictAITreasuryVault (ERC4626 + UUPS)
+
+## Oracle Layer
+
+- OracleAdapter
+- Chainlink price feeds
+
+---
+
+# Smart Contract Features
+
+## Governance
+
+- Proposal creation
+- On-chain voting
+- Timelock execution
+- Quorum enforcement
+- Delegated voting power
+
+## Security
+
+- ReentrancyGuard
+- AccessControl
+- Ownable
+- Checks-Effects-Interactions
+- Slippage protection
+- Oracle staleness checks
+
+## Upgradeability
+
+Treasury vault uses the UUPS proxy pattern with upgrade authorization.
+
+---
+
+# AMM Design
+
+PredictX uses a Constant Product Market Maker:
+
+x * y = k
+
+Features:
+
+- 0.3% swap fee
+- YES/NO swaps
+- Liquidity provision
+- LP token minting
+- Probability calculation from reserves
+
+---
+
+# Frontend Features
+
+- Wallet connection (MetaMask + WalletConnect)
+- Buy YES shares
+- Buy NO shares
+- Real-time reserve display
+- DAO proposal voting
+- Network detection
+- Transaction loading/error states
+- The Graph indexed data
+
+---
+
+# Testing
+
+The project includes:
+
+- Unit tests
+- Fuzz tests
+- Invariant tests
+- Fork tests
+
+Coverage includes:
+
+- AMM swaps
+- Governance voting
+- Treasury accounting
+- Liquidity management
+- Oracle integration
+
+---
+
+# Security
+
+Security tools and practices:
+
+- Slither static analysis
+- Access control enforcement
+- Reentrancy protection
+- CEI pattern
+- SafeERC20
+- Internal audit report
+
+The protocol also includes reproduced-and-fixed vulnerability case studies:
+
+- Reentrancy attack
+- Access control vulnerability
+
+---
+
+# Deployment
+
+## Network
+
+Arbitrum Sepolia Testnet
+
+## Deployment Script
+
+Deployment is fully automated using Foundry scripts.
+
+Example:
+
+```bash
+forge script script/DeployProtocol.s.sol:Deploy \
+--rpc-url $ARBITRUM_SEPOLIA_RPC_URL \
+--broadcast
